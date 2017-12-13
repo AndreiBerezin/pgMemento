@@ -788,9 +788,9 @@ BEGIN
     SELECT 1 FROM pg_event_trigger
       WHERE evtname = 'schema_drop_pre_trigger'
   ) THEN
-    CREATE EVENT TRIGGER schema_drop_pre_trigger ON ddl_command_start
-      WHEN TAG IN ('DROP SCHEMA')
-        EXECUTE PROCEDURE pgmemento.schema_drop_pre_trigger();
+    --CREATE EVENT TRIGGER schema_drop_pre_trigger ON ddl_command_start
+    --  WHEN TAG IN ('DROP SCHEMA')
+    --    EXECUTE PROCEDURE pgmemento.schema_drop_pre_trigger();
   END IF;
 
   -- Create event trigger for ALTER TABLE events to update 'audit_column_log' table
@@ -799,9 +799,9 @@ BEGIN
     SELECT 1 FROM pg_event_trigger
       WHERE evtname = 'table_alter_post_trigger'
   ) THEN
-    CREATE EVENT TRIGGER table_alter_post_trigger ON ddl_command_end
-      WHEN TAG IN ('ALTER TABLE')
-        EXECUTE PROCEDURE pgmemento.table_alter_post_trigger();
+    --CREATE EVENT TRIGGER table_alter_post_trigger ON ddl_command_end
+    --  WHEN TAG IN ('ALTER TABLE')
+    --    EXECUTE PROCEDURE pgmemento.table_alter_post_trigger();
   END IF;
 
   -- Create event trigger for ALTER TABLE events to log data
@@ -810,9 +810,9 @@ BEGIN
     SELECT 1 FROM pg_event_trigger
       WHERE evtname = 'table_alter_pre_trigger'
   ) THEN
-    CREATE EVENT TRIGGER table_alter_pre_trigger ON ddl_command_start
-      WHEN TAG IN ('ALTER TABLE')
-        EXECUTE PROCEDURE pgmemento.table_alter_pre_trigger();
+    --CREATE EVENT TRIGGER table_alter_pre_trigger ON ddl_command_start
+    --  WHEN TAG IN ('ALTER TABLE')
+    --    EXECUTE PROCEDURE pgmemento.table_alter_pre_trigger();
   END IF;
 
   -- Create event trigger for CREATE TABLE events to automatically start auditing on new tables
@@ -822,9 +822,9 @@ BEGIN
       SELECT 1 FROM pg_event_trigger
         WHERE evtname = 'table_create_post_trigger'
     ) THEN
-      CREATE EVENT TRIGGER table_create_post_trigger ON ddl_command_end
-        WHEN TAG IN ('CREATE TABLE')
-          EXECUTE PROCEDURE pgmemento.table_create_post_trigger();
+      --CREATE EVENT TRIGGER table_create_post_trigger ON ddl_command_end
+      --  WHEN TAG IN ('CREATE TABLE')
+      --    EXECUTE PROCEDURE pgmemento.table_create_post_trigger();
     END IF;
   END IF;
 
@@ -834,9 +834,9 @@ BEGIN
     SELECT 1 FROM pg_event_trigger
       WHERE evtname = 'table_drop_post_trigger'
   ) THEN
-    CREATE EVENT TRIGGER table_drop_post_trigger ON sql_drop
-      WHEN TAG IN ('DROP TABLE')
-        EXECUTE PROCEDURE pgmemento.table_drop_post_trigger();
+    --CREATE EVENT TRIGGER table_drop_post_trigger ON sql_drop
+    --  WHEN TAG IN ('DROP TABLE')
+    --    EXECUTE PROCEDURE pgmemento.table_drop_post_trigger();
   END IF;
 
   -- Create event trigger for DROP TABLE events to log data
@@ -845,9 +845,9 @@ BEGIN
     SELECT 1 FROM pg_event_trigger
       WHERE evtname = 'table_drop_pre_trigger'
   ) THEN
-    CREATE EVENT TRIGGER table_drop_pre_trigger ON ddl_command_start
-      WHEN TAG IN ('DROP TABLE')
-        EXECUTE PROCEDURE pgmemento.table_drop_pre_trigger();
+    --CREATE EVENT TRIGGER table_drop_pre_trigger ON ddl_command_start
+    --  WHEN TAG IN ('DROP TABLE')
+    --    EXECUTE PROCEDURE pgmemento.table_drop_pre_trigger();
   END IF;
 END;
 $$
