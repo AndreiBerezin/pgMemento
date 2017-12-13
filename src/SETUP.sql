@@ -907,11 +907,35 @@ BEGIN
     ),
     '{}')::jsonb INTO jsonb_diff;
 
+  --save changes only if 'meta' not changed or 'meta[ignore_seasons]' or 'meta[geoname_id]' changed
   IF jsonb_diff <> '{}'::jsonb THEN
-    INSERT INTO pgmemento.row_log
-      (event_id, audit_id, changes)
-    VALUES 
-      (e_id, NEW.audit_id, jsonb_diff);
+      IF jsonb_diff ? 'meta' IS FALSE THEN
+          INSERT INTO pgmemento.row_log (event_id, audit_id, changes) VALUES (e_id, NEW.audit_id, jsonb_diff);
+      ELSEIF OLD.meta ? 'ignore_seasons' IS TRUE AND NEW.meta ? 'ignore_seasons' IS FALSE THEN
+          INSERT INTO pgmemento.row_log (event_id, audit_id, changes) VALUES (e_id, NEW.audit_id, jsonb_diff);
+      ELSEIF OLD.meta ? 'ignore_seasons' IS TRUE AND NEW.meta ? 'ignore_seasons' IS TRUE AND OLD.meta->>'ignore_seasons' <> NEW.meta->>'ignore_seasons' THEN
+          INSERT INTO pgmemento.row_log (event_id, audit_id, changes) VALUES (e_id, NEW.audit_id, jsonb_diff);
+      ELSEIF OLD.meta ? 'geoname_id' IS TRUE AND NEW.meta ? 'geoname_id' IS FALSE THEN
+          INSERT INTO pgmemento.row_log (event_id, audit_id, changes) VALUES (e_id, NEW.audit_id, jsonb_diff);
+      ELSEIF OLD.meta ? 'geoname_id' IS TRUE AND NEW.meta ? 'geoname_id' IS TRUE AND OLD.meta->>'geoname_id' <> NEW.meta->>'geoname_id' THEN
+          INSERT INTO pgmemento.row_log (event_id, audit_id, changes) VALUES (e_id, NEW.audit_id, jsonb_diff);
+      END IF;
+  ELSE
+      SELECT COALESCE(
+      (SELECT
+          ('{' || string_agg(to_json(key) || ':' || value, ',') || '}') 
+      FROM
+          jsonb_each(to_jsonb(NEW))
+      WHERE
+          NOT ('{' || to_json(key) || ':' || value || '}')::jsonb <@ to_jsonb(OLD)
+      ),
+      '{}')::jsonb INTO jsonb_diff;
+      IF jsonb_diff <> '{}'::jsonb AND
+          (OLD.meta ? 'ignore_seasons' IS FALSE AND NEW.meta ? 'ignore_seasons' IS TRUE OR
+          OLD.meta ? 'geoname_id' IS FALSE AND NEW.meta ? 'geoname_id' IS TRUE)
+      THEN
+          INSERT INTO pgmemento.row_log (event_id, audit_id, changes) VALUES (e_id, NEW.audit_id, jsonb_diff);
+      END IF;
   END IF;
 
   RETURN NULL;
