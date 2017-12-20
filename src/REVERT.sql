@@ -245,6 +245,10 @@ BEGIN
   WHEN $4 = 7 OR $4 = 8 THEN
     IF $2 IS NOT NULL THEN
       BEGIN
+	IF $3 ? 'ids' THEN
+	  SELECT $3 || jsonb_build_object('ids', replace(replace($3->>'ids', ']', '}'), '[', '{')) INTO $3;
+	END IF;
+
         EXECUTE format(
           'INSERT INTO %I.%I SELECT * FROM jsonb_populate_record(null::%I.%I, $1)',
           $6, $5, $6, $5)
