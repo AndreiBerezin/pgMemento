@@ -132,6 +132,9 @@ BEGIN
         jsonb_each_text($3);
 
       BEGIN
+	-- set updated_at field
+        SELECT $3 || jsonb_build_object('updated_at', CURRENT_TIMESTAMP) INTO $3;
+
         -- try to execute UPDATE command
         EXECUTE format(
           'UPDATE %I.%I t SET ' || stmt || ' WHERE t.audit_id = $1',
@@ -248,6 +251,8 @@ BEGIN
 	IF $3 ? 'ids' THEN
 	  SELECT $3 || jsonb_build_object('ids', replace(replace($3->>'ids', ']', '}'), '[', '{')) INTO $3;
 	END IF;
+	-- set updated_at field
+        SELECT $3 || jsonb_build_object('updated_at', CURRENT_TIMESTAMP) INTO $3;
 
         EXECUTE format(
           'INSERT INTO %I.%I SELECT * FROM jsonb_populate_record(null::%I.%I, $1)',
