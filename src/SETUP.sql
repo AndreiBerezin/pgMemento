@@ -883,6 +883,7 @@ $$
 DECLARE
   e_id INTEGER;
   jsonb_diff JSONB;
+  need_remove_excess BOOLEAN;
 BEGIN
   -- get corresponding table event as it has already been logged
   -- by the log_transaction_trigger in advance
@@ -897,6 +898,7 @@ BEGIN
 
   -- log values of updated columns for the processed row
   -- therefore, a diff between OLD and NEW is necessary
+  need_remove_excess := TRUE;
   SELECT COALESCE(
     (SELECT
        ('{' || string_agg(to_json(key) || ':' || value, ',') || '}') 
@@ -909,16 +911,13 @@ BEGIN
 
   --save changes only if 'meta' not changed or 'meta[ignore_seasons]' or 'meta[geoname_id]' changed
   IF jsonb_diff <> '{}'::jsonb THEN
-      IF jsonb_diff ? 'meta' IS FALSE THEN
+      IF (jsonb_diff ? 'meta' IS FALSE) OR
+      (OLD.meta ? 'ignore_seasons' IS TRUE AND NEW.meta ? 'ignore_seasons' IS FALSE) OR
+      (OLD.meta ? 'ignore_seasons' IS TRUE AND NEW.meta ? 'ignore_seasons' IS TRUE AND OLD.meta->>'ignore_seasons' <> NEW.meta->>'ignore_seasons') OR
+      (OLD.meta ? 'geoname_id' IS TRUE AND NEW.meta ? 'geoname_id' IS FALSE) OR
+      (OLD.meta ? 'geoname_id' IS TRUE AND NEW.meta ? 'geoname_id' IS TRUE AND OLD.meta->>'geoname_id' <> NEW.meta->>'geoname_id') THEN
           INSERT INTO pgmemento.row_log (event_id, audit_id, changes) VALUES (e_id, NEW.audit_id, jsonb_diff);
-      ELSEIF OLD.meta ? 'ignore_seasons' IS TRUE AND NEW.meta ? 'ignore_seasons' IS FALSE THEN
-          INSERT INTO pgmemento.row_log (event_id, audit_id, changes) VALUES (e_id, NEW.audit_id, jsonb_diff);
-      ELSEIF OLD.meta ? 'ignore_seasons' IS TRUE AND NEW.meta ? 'ignore_seasons' IS TRUE AND OLD.meta->>'ignore_seasons' <> NEW.meta->>'ignore_seasons' THEN
-          INSERT INTO pgmemento.row_log (event_id, audit_id, changes) VALUES (e_id, NEW.audit_id, jsonb_diff);
-      ELSEIF OLD.meta ? 'geoname_id' IS TRUE AND NEW.meta ? 'geoname_id' IS FALSE THEN
-          INSERT INTO pgmemento.row_log (event_id, audit_id, changes) VALUES (e_id, NEW.audit_id, jsonb_diff);
-      ELSEIF OLD.meta ? 'geoname_id' IS TRUE AND NEW.meta ? 'geoname_id' IS TRUE AND OLD.meta->>'geoname_id' <> NEW.meta->>'geoname_id' THEN
-          INSERT INTO pgmemento.row_log (event_id, audit_id, changes) VALUES (e_id, NEW.audit_id, jsonb_diff);
+          need_remove_excess := FALSE;
       END IF;
   ELSE
       SELECT COALESCE(
@@ -935,7 +934,13 @@ BEGIN
           OLD.meta ? 'geoname_id' IS FALSE AND NEW.meta ? 'geoname_id' IS TRUE)
       THEN
           INSERT INTO pgmemento.row_log (event_id, audit_id, changes) VALUES (e_id, NEW.audit_id, jsonb_diff);
+          need_remove_excess := FALSE;
       END IF;
+  END IF;
+
+  IF need_remove_excess IS TRUE THEN
+      DELETE FROM pgmemento.table_event_log where transaction_id = txid_current();
+      DELETE FROM pgmemento.transaction_log where txid = txid_current();
   END IF;
 
   RETURN NULL;
